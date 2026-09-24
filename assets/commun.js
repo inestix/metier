@@ -2,14 +2,14 @@
    commun.js — ce que les cinq pages partagent.
    Chargé par index.html, salaires.html, exigences.html,
    recruteurs.html et mouvement.html, après Chart.js.
-
+ 
    Tout est déclaré au premier niveau : le petit script de chaque
    page peut donc appeler directement euro(), barres(), NIVEAUX…
    Une page ne fait plus que deux choses : son HTML de section, et
    Commun.demarrer(rendre) où rendre(offres, D) dessine SES
    graphiques à chaque changement de filtre.
    ============================================================ */
-
+ 
 /* ============================================================
    1) UTILITAIRES
    ============================================================ */
@@ -23,7 +23,7 @@ function quantile(a, q) {
   const p = (s.length - 1) * q, bas = Math.floor(p), haut = Math.ceil(p);
   return bas === haut ? s[bas] : s[bas] + (s[haut] - s[bas]) * (p - bas);
 }
-const compter = (liste, cle) => { const c = new Map(); for (const x of liste) { const k = cle(x); if (k == null || k === "") continue; c.set(k, (c.get(k) || 0) + 1); } return [...c].sort((a, b) => b[1] - a[1]); };
+const compter = (liste, cle) => { const c = new Map(); for (const x of liste) { const k = cle(x); if (k == null || k === "") continue; c.set(k, (c.get(k) || 0) + 1); } return [...c].sort((a, b) => [...
 const court = (s, n) => !s ? "—" : (s.length > n ? s.slice(0, n - 1) + "…" : s);
 /* Le libellé de salaire de France Travail, rendu lisible : « Mensuel de 2500.0 Euros à
    2500.0 Euros » -> « 2 500 € brut par mois ». Le commentaire libre qui suit un tiret
@@ -58,12 +58,12 @@ const dateFr = (s, bref = false) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(
 // Âge d'une annonce en jours, par rapport à la date d'extraction.
 const age = o => { const jour = Date.parse(D.date), t = Date.parse(o.date); return (isFinite(jour) && isFinite(t)) ? (jour - t) / 86400000 : null; };
 
-const couleur = "#0a5cff", pale = "rgba(10,92,255,.25)";
-const COULEURS = { Marketing: "#0a5cff", Digital: "#ff6a00", Frontière: "#8e8e93" };
+const couleur = "#e83e8c", pale = "rgba(232,62,140,.25)";
+const COULEURS = { Marketing: "#e83e8c", Digital: "#ff6a00", Frontière: "#8e8e93" };
 // Palette des niveaux : du clair au foncé, assistant → directeur, « autre » en gris. Valable sur toute la page.
-const COUL_NIV = { assistant: "#a7c9ff", charge: "#5f9bf5", responsable: "#2a6ad4", directeur: "#123a7a", autre: "#b4b4bc" };
+const COUL_NIV = { assistant: "#f9d7e7", charge: "#f29bc1", responsable: "#d75a9a", directeur: "#9e3d74", autre: "#b4b4bc" };
 // Sur ces trois teintes claires, le texte blanc n'est pas lisible : on écrit en encre foncée.
-const ENCRE_FONCEE = new Set(["assistant", "charge", "autre"]);
+const ENCRE_FONDEE = new Set(["assistant", "charge", "autre"]);
 const NIVEAUX_DEFAUT = [["assistant", "Assistant·e / junior"], ["charge", "Chargé·e"], ["responsable", "Responsable"], ["directeur", "Directeur·rice"], ["autre", "Autre"]];
 const FORMATIONS_DEFAUT = ["< Bac", "Bac", "Bac+2", "Bac+3/4", "Bac+5"];
 // Six familles de contrat, exclusives : une offre tombe dans une seule.
@@ -260,12 +260,12 @@ function poserNavEtFiltres() {
     ? `<div class="carte">${HTML_FILTRES}</div>`
     // Ailleurs : replié, on vient lire une page, pas refaire ses filtres.
     : `<details class="carte"><summary id="resume-filtres">Filtres</summary>${HTML_FILTRES}</details>`)
-    + `<div class="vide" id="aucune" hidden>Aucune offre ne correspond à ces filtres. Recochez un métier, un type de contrat ou un niveau de poste.</div>`;
+    + `<div class="vide" id="aucune" hidden>Aucune offre ne correspond �� ces filtres. Recochez un métier, un type de contrat ou un niveau de poste.</div>`;
 
   const p = document.getElementById("pied");
   if (p) p.innerHTML =
     `<p style="margin:0 0 8px"><a href="mouvement.html#limites">Limites de ces chiffres</a></p>
-     Chaîne : API France Travail → <code>scripts/extraire.py</code> → <code>data/brut/</code> (chaque version d'annonce, une seule fois) + <code>data/actives/</code> (les offres du jour) → <code>scripts/resumer.py</code> → <code>data/resume.json</code> → ces pages (GitHub Pages).
+     Chaîne : API France Travail → <code>scripts/extraire.py</code> → <code>data/brut/</code> (chaque version d'annonce, une seule fois) + <code>data/actives/</code> (les offres du jour) →[...]
      Une Action GitHub relance la collecte chaque matin à 7 h. Identifiants dans les secrets du dépôt, jamais dans le code.
      Dépôt de démonstration — M2 MOD, IAE Clermont Auvergne, séminaires métiers.`;
 }
@@ -291,7 +291,7 @@ const Commun = {
     // Compteurs dans les cases de filtre + ligne de synthèse
     CONTRATS.forEach(([k]) => { const e = document.getElementById("nb-c-" + k); if (e) e.textContent = parMetier.filter(o => familleContrat(o) === k).length; });
     NIVEAUX.forEach(([k]) => { const e = document.getElementById("nb-n-" + k); if (e) e.textContent = parMetier.filter(o => niv(o) === k).length; });
-    document.getElementById("compte").innerHTML = `<b>${n}</b> offre${n > 1 ? "s" : ""} sélectionnée${n > 1 ? "s" : ""} sur ${total} — ${f.metiers.size} métier${f.metiers.size > 1 ? "s" : ""} coché${f.metiers.size > 1 ? "s" : ""}.`;
+    document.getElementById("compte").innerHTML = `<b>${n}</b> offre${n > 1 ? "s" : ""} sélectionnée${n > 1 ? "s" : ""} sur ${total} — ${f.metiers.size} métier${f.metiers.size > 1 ? "s" : ""}, ${f.contrats.size} type${f.contrats.size > 1 ? "s" : ""} de contrat, ${f.niveaux.size} niveau${f.niveaux.size > 1 ? "x" : ""}`;
     document.getElementById("aucune").hidden = n > 0;
     const resume = document.getElementById("resume-filtres");
     if (resume) resume.textContent = `Filtres (${f.metiers.size} métier${f.metiers.size > 1 ? "s" : ""}, ${n} offre${n > 1 ? "s" : ""})`;
@@ -333,7 +333,8 @@ const Commun = {
       const memoM = memo && Array.isArray(memo.metiers) ? memo.metiers : null;
       document.getElementById("metiers").innerHTML = groupes.map(g => `<h4 style="color:${COULEURS[g] || ""}">${g}</h4>` +
         d.metiers.filter(m => m.groupe === g).map(m =>
-          `<label><input type="checkbox" value="${m.code}" data-groupe="${m.groupe}" ${(memoM ? memoM.includes(m.code) : m.coche) ? "checked" : ""}> ${m.libelle} <small>${m.code} · ${m.actives}</small></label>`).join("")).join("");
+          `<label><input type="checkbox" value="${m.code}" data-groupe="${m.groupe}" ${(memoM ? memoM.includes(m.code) : m.coche) ? "checked" : ""}> ${m.libelle} <small>${m.code} · ${m.actives} ${m.actives > 1 ? "offres" : "offre"}</small></label>`).join("") + `
+`).join("");
       // Une case par groupe : cocher/décocher le groupe entier, cumulables ; état intermédiaire si le groupe est partiel.
       document.getElementById("groupes").innerHTML = groupes.map(g =>
         `<label style="color:${COULEURS[g] || ""}"><input type="checkbox" data-groupe-case="${g}"> ${g}</label>`).join("");
