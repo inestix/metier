@@ -3,7 +3,7 @@ r"""Récupère les offres France Travail des métiers suivis et les enregistre d
 Usage :
     .venv\Scripts\python.exe scripts\extraire.py                 # tous les métiers de METIERS
     .venv\Scripts\python.exe scripts\extraire.py --verifier      # teste seulement la connexion
-    .venv\Scripts\python.exe scripts\extraire.py --rome M1718    # un seul code, pour essayer
+    .venv\Scripts\python.exe scripts\extraire.py --rome D1301    # un seul code, pour essayer
 
 Ce que ça écrit :
     data/brut/<AAAA-MM>/<ROME>.jsonl   une ligne par offre complète (JSON tel que l'API le renvoie),
@@ -34,34 +34,14 @@ RACINE = Path(__file__).resolve().parent.parent
 load_dotenv(RACINE / ".env")
 
 # Les métiers suivis : code ROME -> (libellé, groupe, coché par défaut sur la page).
-# Choisis pour le M2 Marketing Opérationnel et Digital ; la page permet de cocher/décocher.
+# Sélection retail management : direction de magasin, management de département,
+# management de rayons et chef de secteur magasin.
 METIERS = {
-    # Cœur marketing
-    "M1718": ("Chargé(e) de marketing digital", "Marketing", True),
-    "M1716": ("Directeur(trice) marketing digital", "Marketing", True),
-    "M1705": ("Responsable marketing", "Marketing", True),
-    "M1703": ("Chef(fe) de produit", "Marketing", True),
-    "M1620": ("Assistant(e) marketing", "Marketing", True),
-    "M1706": ("Chef(fe) de promotion des ventes", "Marketing", True),
-    "M1430": ("Chargé(e) d'études commerciales", "Marketing", True),
-    "M1711": ("Directeur(trice) du marketing", "Marketing", True),
-    # Digital, contenu, e-commerce
-    "E1113": ("Responsable e-commerce", "Digital", True),
-    "D1438": ("Assistant(e) e-commerce", "Digital", True),
-    "E1101": ("Community manager", "Digital", True),
-    "E1124": ("Social media manager", "Digital", True),
-    "E1405": ("Référenceur(se) web (SEO)", "Digital", True),
-    "M1886": ("Chef(fe) de projet web", "Digital", True),
-    "M1426": ("Chief digital officer", "Digital", True),
-    "M1719": ("Chargé(e) des relations avec les influenceurs", "Digital", True),
-    "E1406": ("Influenceur(se) web", "Digital", True),
-    # Communication et commerce, à la frontière
-    "E1112": ("Chargé(e) de communication", "Frontière", False),
-    "E1103": ("Chargé(e) des relations publiques", "Frontière", False),
-    "E1107": ("Chef(fe) de projet événementiel", "Frontière", False),
-    "E1404": ("Assistant(e) en publicité", "Frontière", False),
-    "D1506": ("Chargé(e) de merchandising", "Frontière", False),
-    "D1415": ("Chargé(e) de relation client (CRM)", "Frontière", False),
+    "D1301": ("Directeur(trice) / responsable de magasin de détail", "Retail management", True),
+    "D1509": ("Manager de département / chef(fe) de secteur en grande distribution", "Retail management", True),
+    "D1502": ("Manager de rayon produits alimentaires", "Retail management", True),
+    "D1503": ("Manager de rayon produits non alimentaires", "Retail management", True),
+    "D1510": ("Chef(fe) de secteur magasin", "Retail management", True),
 }
 
 TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire"
@@ -92,11 +72,11 @@ def chercher(token, params, pas=150, maximum=1150):
         fin = min(debut + pas - 1, maximum - 1)
         r = requests.get(SEARCH_URL, params=dict(params, range=f"{debut}-{fin}"),
                          headers={"Authorization": f"Bearer {token}"}, timeout=30)
-        if r.status_code == 204:                     # aucune offre
+        if r.status_code == 204:
             break
         if r.status_code not in (200, 206):
             raise RuntimeError(f"{r.status_code} : {r.text[:200]}")
-        m = re.search(r"/(\d+)", r.headers.get("Content-Range", ""))   # ex. "offres 0-149/1234"
+        m = re.search(r"/(\d+)", r.headers.get("Content-Range", ""))
         if m:
             total = int(m.group(1))
         lot = r.json().get("resultats", [])
@@ -104,18 +84,18 @@ def chercher(token, params, pas=150, maximum=1150):
         if len(lot) < pas or (total is not None and len(offres) >= total):
             break
         debut += pas
-        time.sleep(0.3)                              # on reste poli avec l'API
+        time.sleep(0.3)
     return offres, total
 
 
 def empreinte(offre):
-    """Empreinte du contenu d'une offre, champs volatils exclus : change si l'annonce change."""
+    """Empreinte du contenu d'une offre, champs volatils exclus."""
     stable = {k: v for k, v in offre.items() if k not in CHAMPS_VOLATILS}
     return hashlib.sha1(json.dumps(stable, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
 
 
 def versions_connues():
-    """Toutes les (id, empreinte) déjà enregistrées dans data/brut, pour ne rien écrire deux fois."""
+    """Toutes les (id, empreinte) déjà enregistrées dans data/brut."""
     vues = set()
     for f in (RACINE / "data" / "brut").glob("*/*.jsonl"):
         with f.open(encoding="utf-8") as fh:
@@ -166,10 +146,9 @@ def main():
                 actives.append((code, o["id"], (o.get("dateActualisation") or "")[:10]))
         lignes_serie.append([aujourdhui, code, total if total is not None else len(offres),
                              len(offres), nouvelles, modifiees])
-        print(f"{code}  {METIERS[code][0]:<48} {len(offres):5d} offres, {nouvelles:4d} nouvelles, {modifiees:3d} modifiées")
+        print(f"{code}  {METIERS[code][0]:<62} {len(offres):5d} offres, {nouvelles:4d} nouvelles, {modifiees:3d} modifiées")
         time.sleep(0.5)
 
-    # Même logique pour les actives du jour : on remplace les codes relancés, on garde les autres.
     fichier_actives = RACINE / "data" / "actives" / f"{aujourdhui}.csv"
     if fichier_actives.exists():
         with fichier_actives.open(encoding="utf-8") as f:
@@ -184,7 +163,6 @@ def main():
     if serie.exists():
         with serie.open(encoding="utf-8") as f:
             lignes = [r for r in csv.reader(f)][1:]
-    # Si on relance le même jour, la ligne du jour est remplacée, pas doublée.
     lignes = [r for r in lignes if not (r[0] == aujourdhui and r[1] in codes)] + lignes_serie
     with serie.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
